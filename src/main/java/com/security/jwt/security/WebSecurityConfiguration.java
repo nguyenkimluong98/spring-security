@@ -17,6 +17,11 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenBasedRememberMeServices;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
+
+import javax.sql.DataSource;
 
 /**
  * @author luongnk@viettel.com.vn
@@ -35,6 +40,7 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
     private final UserService userService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
+    private final DataSource dataSource;
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
@@ -43,22 +49,24 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
+        // h2 database
+        http.authorizeRequests()
+                .antMatchers("/h2-console/**").permitAll()
+                .and()
+                .headers().frameOptions().disable();
+
         http.csrf().disable()
                 .authorizeRequests()
-                .antMatchers("/login").permitAll()
                 .antMatchers("/authentication/**").permitAll()
                 .anyRequest().authenticated()
                 .and()
-                .formLogin();
+                .formLogin().loginProcessingUrl("/login").defaultSuccessUrl("/customer/me");
 
         http.rememberMe()
-                .key(secret)
-                .tokenValiditySeconds(expireAt)
-                .alwaysRemember(true)
-                .userDetailsService(userService);
+                .tokenRepository(tokenRepository());
 
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-//
+
         http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
 
 //        http.exceptionHandling().authenticationEntryPoint(authenticationEntryPoint);
@@ -68,6 +76,14 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
     @Override
     public AuthenticationManager authenticationManagerBean() throws Exception {
         return super.authenticationManagerBean();
+    }
+
+    @Bean
+    public PersistentTokenRepository tokenRepository() {
+        JdbcTokenRepositoryImpl tokenRepository = new JdbcTokenRepositoryImpl();
+        tokenRepository.setCreateTableOnStartup(true);
+        tokenRepository.setDataSource(dataSource);
+        return tokenRepository;
     }
 
     @Bean

@@ -9,16 +9,14 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * @author luongnk@viettel.com.vn
  */
 
 @RestController
+@RequestMapping("/authentication")
 @RequiredArgsConstructor
 public class AuthenticationController {
 
@@ -40,10 +38,5 @@ public class AuthenticationController {
         // Trả về jwt cho người dùng.
         String jwt = jwtUtils.generateToken(((UserDetail) authentication.getPrincipal()).getUser());
         return new LoginResponse(jwt);
-    }
-
-    @GetMapping("/me")
-    public String whoami() {
-        return SecurityContextHolder.getContext().getAuthentication().getName();
     }
 }

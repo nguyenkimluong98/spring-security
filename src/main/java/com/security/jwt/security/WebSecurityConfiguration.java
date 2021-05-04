@@ -4,6 +4,7 @@ import com.security.jwt.security.entrypoint.RestAuthenticationEntryPoint;
 import com.security.jwt.security.jwt.JwtAuthenticationFilter;
 import com.security.jwt.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.BeanIds;
@@ -25,6 +26,12 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
 
+    @Value("${jwt.secret}")
+    private String secret;
+
+    @Value("${jwt.expire.at}")
+    private Integer expireAt;
+
     private final UserService userService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
@@ -37,15 +44,24 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http.csrf().disable()
-            .authorizeRequests()
-            .antMatchers("/login").permitAll()
-            .anyRequest().authenticated();
+                .authorizeRequests()
+                .antMatchers("/login").permitAll()
+                .antMatchers("/authentication/**").permitAll()
+                .anyRequest().authenticated()
+                .and()
+                .formLogin();
+
+        http.rememberMe()
+                .key(secret)
+                .tokenValiditySeconds(expireAt)
+                .alwaysRemember(true)
+                .userDetailsService(userService);
 
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
+//
         http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
 
-        http.exceptionHandling().authenticationEntryPoint(authenticationEntryPoint);
+//        http.exceptionHandling().authenticationEntryPoint(authenticationEntryPoint);
     }
 
     @Bean(BeanIds.AUTHENTICATION_MANAGER)
